@@ -16,7 +16,7 @@ import { TodoItem } from '../components/TodoItem';
 import { AddTodoInput } from '../components/AddTodoInput';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { BlurView } from '../components/BlurView';
-import { saveTodos, loadTodos } from '../utils/storage';
+import { saveTodos, loadTodos, saveToHistory } from '../utils/storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { hapticFeedback } from '../utils/haptics';
 
@@ -57,12 +57,14 @@ export const HomeScreen: React.FC = () => {
   const saveTodosToStorage = async (newTodos: Todo[]) => {
     try {
       await saveTodos(newTodos);
+      // Также сохраняем в историю при каждом сохранении
+      await saveToHistory(newTodos);
     } catch (error) {
       console.error('Error saving todos:', error);
     }
   };
 
-  const addTodo = (title: string, description?: string) => {
+  const addTodo = async (title: string, description?: string) => {
     hapticFeedback.light();
     
     const newTodo: Todo = {
@@ -75,25 +77,29 @@ export const HomeScreen: React.FC = () => {
     
     const newTodos = [newTodo, ...todos];
     setTodos(newTodos);
-    saveTodosToStorage(newTodos);
+    await saveTodosToStorage(newTodos);
   };
 
-  const toggleTodo = (id: string) => {
+  const toggleTodo = async (id: string) => {
     hapticFeedback.medium();
     
     const newTodos = todos.map(todo =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      todo.id === id ? { 
+        ...todo, 
+        completed: !todo.completed,
+        completedAt: !todo.completed ? new Date() : undefined
+      } : todo
     );
     setTodos(newTodos);
-    saveTodosToStorage(newTodos);
+    await saveTodosToStorage(newTodos);
   };
 
-  const deleteTodo = (id: string) => {
+  const deleteTodo = async (id: string) => {
     hapticFeedback.heavy();
     
     const newTodos = todos.filter(todo => todo.id !== id);
     setTodos(newTodos);
-    saveTodosToStorage(newTodos);
+    await saveTodosToStorage(newTodos);
   };
 
   const onRefresh = async () => {
